@@ -7,11 +7,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![CI](https://github.com/LCccode/wikigraph/actions/workflows/ci.yml/badge.svg)](https://github.com/LCccode/wikigraph/actions/workflows/ci.yml)
 
-**A drop-in wiki-builder skill for AI coding assistants.** Type `/lcwiki` in Claude Code or OpenClaw — it reads any folder of docs, compiles them into a structured wiki + knowledge graph, and lets your AI answer questions from that wiki at **~10% the token cost of vanilla RAG**, with **~10× lower ongoing compile cost** thanks to smart incremental ingest.
+**The AI-native knowledge base builder, grounded in personal knowledge management theory, built for enterprise multi-department co-creation.** Type `/lcwiki` in Claude Code or OpenClaw to turn any folder of docs into a structured, collaborative, AI-queryable knowledge base — with **precision knowledge allocation** at ~10% the token cost of vanilla RAG and **~10× lower ongoing compile cost** via smart incremental ingest.
 
-Fully multimodal. Drop in `.docx`, `.pdf`, `.xlsx`, `.pptx`, markdown, images, audio, or video — lcwiki converts everything to markdown, extracts per-doc structure, concepts with family aliases, and a vis-network knowledge graph in one shot. Then it lets your AI query the wiki with a three-layer token-first fallback: scan 100-token tldrs → fall back to article body → only touch raw content as a last resort.
+Fully multimodal. Drop in `.docx`, `.pdf`, `.xlsx`, `.pptx`, markdown, images, audio, or video — lcwiki converts everything to markdown, extracts per-doc structure, concepts with cross-department family aliases, and an interactive knowledge graph in one shot. Then it lets your AI query the KB with a three-layer token-first fallback: scan 100-token tldrs → fall back to article body → only touch raw content as a last resort.
 
-> **Inspired by Andrej Karpathy's `/raw` folder idea** — the one he talks about on podcasts, where he drops papers, screenshots, tweets, and whiteboard photos into a single directory and wants his AI to just *understand it all*. [safishamsi/graphify](https://github.com/safishamsi/graphify) turned that folder into a knowledge graph. **lcwiki takes it one layer further: it turns your `/raw` folder into a proper wiki *and* a graph — so your AI has both long-term memory *and* a map**. Every doc gets a structured article with a 100-token tldr for cheap lookups; every concept gets a standalone page with family aliases; every connection lives in a persistent queryable graph. All three layers are built in one shot by a Claude subagent pass, wrapped with CLI-atomic write-verify so your agent can't silently corrupt the data, and maintained long-term by a self-healing `/lcwiki audit` with LLM-as-judge checks.
+### 📖 The positioning
+
+lcwiki sits at the intersection of three traditions that rarely talk to each other:
+
+1. **Personal Knowledge Management (PKM) theory** — Niklas Luhmann's Zettelkasten, Tiago Forte's *Building a Second Brain*, the Obsidian / Logseq / Roam community: atomic notes, bidirectional links, emergent structure, concepts as first-class citizens. These principles produce KBs that actually *compound* over time.
+2. **Enterprise knowledge management** — Notion / Confluence / Microsoft SharePoint: multi-user, permissioned, structured workflows, but fundamentally authoring tools with weak retrieval and no AI-native query.
+3. **AI-driven RAG** — LangChain / LlamaIndex / vanilla embedding retrieval: query-side intelligence, but no KB discipline — chunks, embeddings, and prayer.
+
+**lcwiki takes the PKM foundation (theory that produces good KBs), scales it to enterprise multi-department co-creation (one inbox, many contributors, one canonical concept), and wraps it in AI-native precision allocation (the right piece of knowledge goes to the right question at the right cost).** Your sales team drops proposals, R&D drops specs, legal drops contracts, research drops papers — and a single shared concept index merges "Digital Platform" / "数字基座" / "Digital Base" into one canonical concept so cross-department queries don't miss connections.
+
+> **Inspired by Luhmann's Zettelkasten and Andrej Karpathy's modern `/raw` folder idea** — dropping every paper, screenshot, tweet, and whiteboard photo into one directory and expecting your AI to just *understand it all*. [safishamsi/graphify](https://github.com/safishamsi/graphify) turned that folder into a knowledge graph. **lcwiki takes it two layers further: a proper wiki *and* a graph *and* a precision-allocation query layer** — so your AI has long-term memory, a map, and a cost-aware retrieval strategy. Every doc gets a structured article with a 100-token tldr; every concept gets a standalone page with family aliases; every connection lives in a persistent queryable graph. All three layers are built in one shot by an LLM subagent pass, wrapped with CLI-atomic write-verify so agents can't silently corrupt the KB, and maintained long-term by a self-healing `/lcwiki audit` with LLM-as-judge checks.
 
 ```
 /lcwiki ingest      # drop anything into raw/inbox/, convert + stage
@@ -47,14 +57,17 @@ drafts/
 
 > If you already tried graphify, LangChain, or LlamaIndex and walked away thinking "this is almost what I want but not quite" — lcwiki is what you wanted.
 
+- 📚 **PKM-first design, enterprise-scale execution.** Atomic notes, bidirectional links, and emergent structure — the same principles that made Zettelkasten and Obsidian work for individuals, now applied to multi-department corporate KBs. Your concepts are first-class pages, not graph labels.
+- 🏢 **Multi-department co-creation out of the box.** Sales drops proposals, R&D drops specs, legal drops contracts, research drops papers — all into the same `raw/inbox/`. Concept family aliases automatically merge "Digital Platform" / "digital-base" / "数字基座" into one canonical concept, so cross-department queries never miss a connection. `source_map.json` preserves which team authored what.
+- 🎯 **Precision knowledge allocation.** The three-layer query isn't just cheap — it's *precise*. The LLM selects the smallest sufficient context (tldr / article / raw content) for each question, so the right piece of knowledge goes to the right question at the right cost. No more drowning the model in 20K tokens of prose when a 100-token tldr had the answer.
 - ⚡ **Three layers, not one.** `articles` (per-doc wiki with a 100-token tldr) + `concepts` (standalone pages with family aliases) + `graph` (knowledge map). Most RAG tools give you chunks *or* a graph. lcwiki gives you a proper **wiki you can actually read** on top of the graph.
 - 💸 **~10% the token cost of vanilla RAG at query time.** Queries hit the tldr layer first (<5K tokens total for a whole KB) and only fall through to article body / raw content when necessary. You can let your agent query the KB 30 times a conversation without thinking about cost.
 - 📉 **~10× lower ongoing compile cost.** Smart incremental ingest means you only pay tokens on *new or changed* files. After the one-time full compile, daily inbox updates cost 5–15% of a naive re-compile — a 40-doc corpus that costs ~$2 to compile once costs ~$0.15/day to keep current.
 - 🧠 **Smart incremental ingest classification.** Drop a file with the same name but new content → old version auto-cleaned, new one staged. Drop the same file twice → skipped. Drop something that breaks → clearly reported. **No more "why did compile burn $5 on files I already had"**.
-- 🛡️ **Agent-proof with CLI-atomic write-verify.** Every write command has a whitelist-schema `*-verify` partner. Agents cannot invent fields, skip required concepts, or emit edges below the confidence floor. We learned this the hard way and built the gate so you don't have to.
-- 🔁 **Self-healing via `/lcwiki audit`.** Ghost nodes, orphan concepts, missing source files, low-confidence edges — all detected with LLM-as-judge, backed up before any change, user-confirm before any delete. Your graph stays coherent after the 50th compile.
+- 🛡️ **Agent-proof with CLI-atomic write-verify.** Every write command has a whitelist-schema `*-verify` partner. Agents cannot invent fields, skip required concepts, or emit edges below the confidence floor. Critical at enterprise scale where dozens of contributors and agents share the same KB.
+- 🔁 **Self-healing via `/lcwiki audit`.** Ghost nodes, orphan concepts, missing source files, low-confidence edges — all detected with LLM-as-judge, backed up before any change, user-confirm before any delete. Your KB stays coherent after 500 contributions from 20 departments.
 - 🎯 **Drop-in for both Claude Code AND OpenClaw.** One `pip install`, one `lcwiki install --platform <name>`, and `/lcwiki` is live as a skill in the agent runtime. No SaaS lock-in. No vendor tier.
-- 🔗 **Standing on graphify's shoulders.** The graph construction, Leiden clustering, and vis-network export are from [safishamsi/graphify](https://github.com/safishamsi/graphify) (vendored, MIT). lcwiki adds the wiki layer, the three-layer query, the smart ingest, and the agent-proofing. Credit where credit is due.
+- 🔗 **Standing on graphify's shoulders.** The graph construction, Leiden clustering, and vis-network export are from [safishamsi/graphify](https://github.com/safishamsi/graphify) (vendored, MIT). lcwiki adds the wiki layer, the three-layer query, the enterprise co-creation flow, and the agent-proofing. Credit where credit is due.
 
 ## Why three layers
 
@@ -207,6 +220,22 @@ lcwiki takes a different goal: **make the folder queryable as a wiki**. The grap
 | Can stack on top                | build a LangChain retriever over lcwiki's compiled wiki | — |
 
 lcwiki is **not** a replacement for LangChain or LlamaIndex — it's a pre-step. You can absolutely point a LangChain pipeline at lcwiki's compiled wiki. Most people won't need to: the `tldr + article` layer answers 80% of real questions directly, and you can ship a useful AI assistant on it alone.
+
+### vs Notion AI / Confluence / Obsidian Enterprise
+
+| | **lcwiki** | Notion AI | Confluence | Obsidian (w/ Smart Connections) |
+|---|---|---|---|---|
+| Open source | **yes (MIT)** | no (SaaS) | no (SaaS/on-prem) | core yes / plugins vary |
+| Self-hosted | **yes (pip install)** | no | yes | yes |
+| AI-native query at low token cost | **yes (~100–3K)** | yes, but 10–30K/query | via Atlassian AI, 10K+ | depends on plugin |
+| Multi-department co-creation | **yes (inbox + source_map)** | yes | **yes (native)** | no (personal-first) |
+| Cross-department concept de-dup | **yes (family aliases)** | partial (tags) | partial (labels) | manual |
+| Ingests docx/pdf/xlsx/pptx | **yes (in-place)** | import only | import only | via plugins |
+| Programmatic API for AI agents | **yes (CLI-atomic)** | limited | limited | limited |
+| Cost at enterprise scale | **$2 one-time + $5/month on active corpus** | $10–40/user/mo | $5–10/user/mo + AI add-on | varies |
+| Concept/page precision allocation | **yes (three-layer query)** | no (full-doc retrieval) | no | no |
+
+**Where lcwiki wins**: when your team already has a folder of authoritative docs and wants them AI-queryable at enterprise scale without moving everything into a SaaS silo. **Where Notion / Confluence still win**: rich browser-based authoring, permissions UI, comments & reviews. **The real-world pattern**: Notion / Confluence for live authoring, lcwiki for the authoritative archive your AI actually reads from. Export your Confluence space weekly, drop the `.docx`s into `raw/inbox/`, `/lcwiki ingest + compile`, done.
 
 ### Real query token comparison
 
