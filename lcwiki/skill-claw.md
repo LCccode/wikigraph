@@ -1054,11 +1054,11 @@ After merging, rerun `/lcwiki graph` so the graph picks up the consolidated conc
 ### 使用
 
 ```
-# 清掉"伊吾" 开头的旧记录（支持子串匹配）
-/lcwiki update ~/.openclaw/lcwiki 伊吾县教育局智慧教育应用建设方案
+# 清掉"Acme" 开头的旧记录（支持子串匹配）
+/lcwiki update ~/.openclaw/lcwiki Acme-Corp-Q3-Proposal
 
 # OpenClaw 下 kb_path 可省略（用默认 KB）
-/lcwiki update 伊吾
+/lcwiki update Acme
 ```
 
 ### Step 1 — 查找匹配记录

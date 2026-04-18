@@ -7,7 +7,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![CI](https://github.com/LCccode/wikigraph/actions/workflows/ci.yml/badge.svg)](https://github.com/LCccode/wikigraph/actions/workflows/ci.yml)
 
-**The AI-native knowledge base builder, grounded in personal knowledge management theory, built for enterprise multi-department co-creation.** Type `/lcwiki` in Claude Code or OpenClaw to turn any folder of docs into a structured, collaborative, AI-queryable knowledge base — with **precision knowledge allocation** at ~10% the token cost of vanilla RAG and **~10× lower ongoing compile cost** via smart incremental ingest.
+**The enterprise-grade knowledge base agent, grounded in personal knowledge management theory, built for cross-department KB co-creation.** Type `/lcwiki` in Claude Code or OpenClaw — lcwiki plugs into your AI agent as its **long-term KB brain**, trains on any folder of docs your teams drop in, and answers cross-department queries with **precision knowledge allocation** at ~10% the token cost of vanilla RAG and **~10× lower ongoing training cost** via smart incremental ingest.
+
+> **Mount lcwiki on OpenClaw or Claude Code as a drop-in agent brain.** One `pip install`, one `lcwiki install --platform claude|claw`, and your AI agent has a persistent, structured, collaboratively-trained knowledge base it can query accurately — across sessions, across departments, across months of KB drift.
 
 Fully multimodal. Drop in `.docx`, `.pdf`, `.xlsx`, `.pptx`, markdown, images, audio, or video — lcwiki converts everything to markdown, extracts per-doc structure, concepts with cross-department family aliases, and an interactive knowledge graph in one shot. Then it lets your AI query the KB with a three-layer token-first fallback: scan 100-token tldrs → fall back to article body → only touch raw content as a last resort.
 
@@ -19,7 +21,14 @@ lcwiki sits at the intersection of three traditions that rarely talk to each oth
 2. **Enterprise knowledge management** — Notion / Confluence / Microsoft SharePoint: multi-user, permissioned, structured workflows, but fundamentally authoring tools with weak retrieval and no AI-native query.
 3. **AI-driven RAG** — LangChain / LlamaIndex / vanilla embedding retrieval: query-side intelligence, but no KB discipline — chunks, embeddings, and prayer.
 
-**lcwiki takes the PKM foundation (theory that produces good KBs), scales it to enterprise multi-department co-creation (one inbox, many contributors, one canonical concept), and wraps it in AI-native precision allocation (the right piece of knowledge goes to the right question at the right cost).** Your sales team drops proposals, R&D drops specs, legal drops contracts, research drops papers — and a single shared concept index merges "Digital Platform" / "数字基座" / "Digital Base" into one canonical concept so cross-department queries don't miss connections.
+**lcwiki is the first enterprise KB solution that is simultaneously:**
+
+- an **agent brain** — mount it on OpenClaw or Claude Code, and your AI has long-term, structured, queryable memory across sessions,
+- a **cross-department co-creation platform** — sales, R&D, legal, research all contribute to one shared KB through a single inbox; concept family aliases merge cross-department terminology automatically,
+- a **trainable KB engine** — you "train" lcwiki by dropping docs into `raw/inbox/` and running `compile`; no vector DB setup, no chunking strategy, no embedding model tuning — the LLM reads each doc once and writes the wiki,
+- a **precision retrieval system** — the three-layer query selects the smallest sufficient context per question, so the right knowledge reaches the right question at the right cost.
+
+Your sales team drops proposals, R&D drops specs, legal drops contracts, research drops papers — and a single shared concept index merges "Digital Platform" / "数字基座" / "Digital Base" into one canonical concept so cross-department queries don't miss connections. The KB scales from personal (10 docs) to enterprise (1000+ docs across 20 departments) with the same architecture.
 
 > **Inspired by Luhmann's Zettelkasten and Andrej Karpathy's modern `/raw` folder idea** — dropping every paper, screenshot, tweet, and whiteboard photo into one directory and expecting your AI to just *understand it all*. [safishamsi/graphify](https://github.com/safishamsi/graphify) turned that folder into a knowledge graph. **lcwiki takes it two layers further: a proper wiki *and* a graph *and* a precision-allocation query layer** — so your AI has long-term memory, a map, and a cost-aware retrieval strategy. Every doc gets a structured article with a 100-token tldr; every concept gets a standalone page with family aliases; every connection lives in a persistent queryable graph. All three layers are built in one shot by an LLM subagent pass, wrapped with CLI-atomic write-verify so agents can't silently corrupt the KB, and maintained long-term by a self-healing `/lcwiki audit` with LLM-as-judge checks.
 
