@@ -1,6 +1,6 @@
 """LLM Wiki - Enterprise knowledge base with structured Wiki + knowledge graph."""
 
-__version__ = "0.4.1"
+__version__ = "0.5.1"
 
 # Lazy imports (same pattern as graphify)
 _LAZY = {

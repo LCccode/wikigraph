@@ -2,6 +2,11 @@
 
 All notable changes to lcwiki will be documented in this file. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] — 2026-04-19
+
+### Fixed
+- `lcwiki version` now prints the actual package version (was stuck at `0.4.1` due to a hardcoded string in `__init__.py` not matching `pyproject.toml`).
+
 ## [0.5.0] — 2026-04-19
 
 ### Added

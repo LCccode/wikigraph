@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lcwiki"
-version = "0.5.0"
+version = "0.5.1"
 description = "Turn any folder of docs into a queryable wiki + knowledge graph. Three-layer architecture: articles · concepts · graph."
 readme = "README.md"
 license = { file = "LICENSE" }
