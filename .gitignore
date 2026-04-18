@@ -1,0 +1,90 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+wheels/
+develop-eggs/
+parts/
+sdist/
+var/
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtualenvs
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Ruff / mypy
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# lcwiki runtime data (never commit a real KB)
+.openclaw/
+lcwiki-runtime/
+**/raw/inbox/*
+!**/raw/inbox/.gitkeep
+**/raw/archive/
+**/staging/pending/
+**/staging/processing/
+**/staging/review/
+**/staging/done/
+**/vault/graph/.extract_chunk_*.json
+**/vault/graph/.graph_backup_*.json
+**/logs/*.log
+**/logs/*.jsonl
+
+# lcwiki-web (separate project, not part of OSS core)
+lcwiki-web/
+
+# Secrets (never commit!)
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Node (for docs/ tooling, not the core)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+
+# Jupyter
+.ipynb_checkpoints/

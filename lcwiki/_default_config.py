@@ -1,0 +1,85 @@
+"""Default config.json values for LLM Wiki.
+
+See doc/llmwiki/A1-config-schema.md for full documentation.
+"""
+
+DEFAULT_CONFIG = {
+    "version": "0.1.0",
+    "ingest": {
+        "max_file_size_mb": 50,
+        "max_text_size_mb": 10,
+        "max_inbox_files": 200,
+        "max_inbox_words": 2000000,
+        "sensitive_patterns": [
+            ".env", ".envrc", ".pem", ".key", ".p12", ".cert",
+            ".pfx", "credentials.json", "*_secret*", "*_token*",
+        ],
+        "whisper_model": "base",
+        "whisper_prompt_override": None,
+        "retry_max_attempts": 5,
+        "debounce_seconds": 3,
+    },
+    "compile": {
+        "chunk_size": 22,
+        "max_concepts_per_article": 8,
+        "max_concepts_deep": 15,
+        "max_hyperedges_per_article": 3,
+        "batch_fail_threshold": 0.5,
+        "auto_publish_confidence_threshold": 0.7,
+        "context_level": 2,
+        "max_related_concepts": 5,
+    },
+    "graph": {
+        "directed": True,
+        "community_algorithm": "leiden",
+        "community_split_threshold": 0.25,
+        "community_min_split_size": 10,
+        "full_recluster_every_n": 100,
+        "cohesion_low_threshold": 0.15,
+        "cohesion_low_min_nodes": 5,
+        "isolated_degree_threshold": 1,
+        "god_nodes_top_n": 10,
+        "suggested_questions_top_n": 7,
+        "surprising_connections_top_n": 5,
+        "betweenness_sample_k": 100,
+        "confidence_score_default_forbidden": True,
+        "backup_max_count": 10,
+    },
+    "query": {
+        "default_mode": "bfs",
+        "bfs_depth": 3,
+        "dfs_depth": 6,
+        "default_budget": 2000,
+        "node_match_label_weight": 1.0,
+        "node_match_source_weight": 0.5,
+        "node_match_top_n": 3,
+        "save_to_memory": True,
+    },
+    "export": {
+        "obsidian_canvas_max_edges": 200,
+        "html_max_nodes_for_viz": 5000,
+        "html_theme": "dark",
+        "html_physics_iterations": 200,
+    },
+    "security": {
+        "block_private_ips": True,
+        "block_cloud_metadata": True,
+        "max_redirect_hops": 5,
+        "label_max_length": 256,
+        "url_allowed_schemes": ["http", "https"],
+    },
+    "watch": {
+        "enabled": False,
+        "debounce_seconds": 3,
+        "frontmatter_only_fast_path": True,
+    },
+    "token_optimization": {
+        "compile_context_level": 2,
+        "compile_max_related_concepts": 5,
+        "graph_incremental_mode": True,
+        "graph_full_recluster_every_n": 100,
+        "report_split_summary": True,
+        "report_summary_max_tokens": 3000,
+        "concepts_use_aliases": True,
+    },
+}

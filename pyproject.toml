@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lcwiki"
+version = "0.5.0"
+description = "Turn any folder of docs into a queryable wiki + knowledge graph. Three-layer architecture: articles · concepts · graph."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "LCccode", email = "34874212+LCccode@users.noreply.github.com" }
+]
+keywords = [
+    "knowledge-graph",
+    "wiki",
+    "rag",
+    "llm",
+    "claude-code",
+    "openclaw",
+    "knowledge-base",
+    "skill",
+    "agent",
+    "vis-network",
+    "markdown",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Documentation",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.11"
+dependencies = [
+    # vendored graphify (build/cluster/export/analyze/validate/security/detect) lives at lcwiki/_vendored_graphify/
+    # — no external graphify dep.  To refresh vendored code run scripts/vendor-graphify.sh
+    "networkx",
+    "python-docx",
+    "openpyxl",
+    "pypdf",
+]
+
+[project.urls]
+Homepage = "https://github.com/LCccode/wikigraph"
+Documentation = "https://github.com/LCccode/wikigraph#readme"
+Repository = "https://github.com/LCccode/wikigraph.git"
+Issues = "https://github.com/LCccode/wikigraph/issues"
+Changelog = "https://github.com/LCccode/wikigraph/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+leiden = ["graspologic; python_version < '3.13'"]
+pptx = ["python-pptx"]
+video = ["faster-whisper", "yt-dlp"]
+mcp = ["mcp"]
+neo4j = ["neo4j"]
+svg = ["matplotlib"]
+watch = ["watchdog"]
+all = [
+    "lcwiki[leiden,pptx,video,mcp,neo4j,svg,watch]",
+]
+
+[project.scripts]
+lcwiki = "lcwiki.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lcwiki*"]
+
+[tool.setuptools.package-data]
+lcwiki = ["skill*.md"]
