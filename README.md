@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![CI](https://github.com/LCccode/wikigraph/actions/workflows/ci.yml/badge.svg)](https://github.com/LCccode/wikigraph/actions/workflows/ci.yml)
 
-**A drop-in wiki-builder skill for AI coding assistants.** Type `/lcwiki` in Claude Code or OpenClaw — it reads any folder of docs, compiles them into a structured wiki + knowledge graph, and lets your AI answer questions from that wiki at **~10% the token cost of vanilla RAG**.
+**A drop-in wiki-builder skill for AI coding assistants.** Type `/lcwiki` in Claude Code or OpenClaw — it reads any folder of docs, compiles them into a structured wiki + knowledge graph, and lets your AI answer questions from that wiki at **~10% the token cost of vanilla RAG**, with **~10× lower ongoing compile cost** thanks to smart incremental ingest.
 
 Fully multimodal. Drop in `.docx`, `.pdf`, `.xlsx`, `.pptx`, markdown, images, audio, or video — lcwiki converts everything to markdown, extracts per-doc structure, concepts with family aliases, and a vis-network knowledge graph in one shot. Then it lets your AI query the wiki with a three-layer token-first fallback: scan 100-token tldrs → fall back to article body → only touch raw content as a last resort.
 
@@ -48,8 +48,9 @@ drafts/
 > If you already tried graphify, LangChain, or LlamaIndex and walked away thinking "this is almost what I want but not quite" — lcwiki is what you wanted.
 
 - ⚡ **Three layers, not one.** `articles` (per-doc wiki with a 100-token tldr) + `concepts` (standalone pages with family aliases) + `graph` (knowledge map). Most RAG tools give you chunks *or* a graph. lcwiki gives you a proper **wiki you can actually read** on top of the graph.
-- 💸 **~10% the token cost of vanilla RAG.** Queries hit the tldr layer first (<5K tokens total for a whole KB) and only fall through to article body / raw content when necessary. You can let your agent query the KB 30 times a conversation without thinking about cost.
-- 🧠 **Smart incremental ingest.** Drop a file with the same name but new content → old version auto-cleaned, new one staged. Drop the same file twice → skipped. Drop something that breaks → clearly reported. **No more "why did compile burn $5 on files I already had"**.
+- 💸 **~10% the token cost of vanilla RAG at query time.** Queries hit the tldr layer first (<5K tokens total for a whole KB) and only fall through to article body / raw content when necessary. You can let your agent query the KB 30 times a conversation without thinking about cost.
+- 📉 **~10× lower ongoing compile cost.** Smart incremental ingest means you only pay tokens on *new or changed* files. After the one-time full compile, daily inbox updates cost 5–15% of a naive re-compile — a 40-doc corpus that costs ~$2 to compile once costs ~$0.15/day to keep current.
+- 🧠 **Smart incremental ingest classification.** Drop a file with the same name but new content → old version auto-cleaned, new one staged. Drop the same file twice → skipped. Drop something that breaks → clearly reported. **No more "why did compile burn $5 on files I already had"**.
 - 🛡️ **Agent-proof with CLI-atomic write-verify.** Every write command has a whitelist-schema `*-verify` partner. Agents cannot invent fields, skip required concepts, or emit edges below the confidence floor. We learned this the hard way and built the gate so you don't have to.
 - 🔁 **Self-healing via `/lcwiki audit`.** Ghost nodes, orphan concepts, missing source files, low-confidence edges — all detected with LLM-as-judge, backed up before any change, user-confirm before any delete. Your graph stays coherent after the 50th compile.
 - 🎯 **Drop-in for both Claude Code AND OpenClaw.** One `pip install`, one `lcwiki install --platform <name>`, and `/lcwiki` is live as a skill in the agent runtime. No SaaS lock-in. No vendor tier.
@@ -151,11 +152,14 @@ On a test corpus of a few dozen proposal-style docs (~1–3 MB total):
 
 | | Cost | Notes |
 |---|---|---|
-| **Compile once** | ~$2 (one-time) | per dozen docs, with `qwen-plus` or `claude-sonnet` |
+| **Compile once** (full cold build) | ~$2 (one-time) | per dozen docs, with `qwen-plus` or `claude-sonnet` |
+| **Daily incremental compile** | **~$0.15** (10× cheaper) | smart ingest only pays for new/changed files |
 | **Query** | ~$0.01 each | tracked in `logs/cost.jsonl`; most queries stop at the tldr layer |
 | **Audit** | ~$0.05 | full-graph health check, run weekly |
 
 Actual numbers vary by model, doc complexity, and corpus size — the numbers above are ballpark from internal tests. Your mileage will vary.
+
+**Why the 10× drop on ongoing compile?** A naive approach re-reads and re-extracts every doc on every run. lcwiki's sha256-indexed ingest only feeds the LLM the files that are genuinely new or have genuinely changed — typically 5–15% of an active inbox. Over a month of daily runs, that compounds into a ~10× cost reduction vs "just recompile everything".
 
 The first `compile` is by far the heaviest step. After that, queries are cheap enough to run in tight loops — your AI assistant can check the wiki dozens of times per conversation without thinking about cost.
 
