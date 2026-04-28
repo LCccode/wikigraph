@@ -35,6 +35,12 @@ from lcwiki.index import (
     save_source_map,
     load_source_map,
     append_event,
+    load_filename_index,
+    save_filename_index,
+    rebuild_filename_index,
+    filename_index_lookup,
+    filename_index_add,
+    filename_index_remove,
 )
 from lcwiki.compile import create_task, save_task
 from lcwiki.update import plan_removal, apply_removal
@@ -69,6 +75,11 @@ def ingest_inbox(kb_root: Path, auto_update: bool = True) -> dict:
     staging = kb_root / "staging"
 
     source_map = load_source_map(meta)
+    # 加载反向索引；旧 KB 冷启动时自动重建
+    filename_index = load_filename_index(meta)
+    if not filename_index and source_map:  # 冷启动：文件不存在或空
+        filename_index = rebuild_filename_index(source_map)
+        save_filename_index(filename_index, meta)
     report: dict = {"skipped": [], "updated": [], "new": [], "failed": []}
 
     if not inbox.exists():
@@ -89,16 +100,16 @@ def ingest_inbox(kb_root: Path, auto_update: bool = True) -> dict:
                 continue
 
             # 2. Filename-stem conflict with different sha → auto-update
-            conflict_shas = [
-                s
-                for s, info in source_map.items()
-                if Path(info.get("original_filename", "") or "").stem == f.stem
-                and s != sha
-            ]
+            # FIX-A: O(1) 反向索引查找，替代原 O(N) 遍历
+            conflict_shas = filename_index_lookup(
+                f.stem, filename_index, exclude_sha=sha
+            )
             if auto_update and conflict_shas:
                 for old_sha in conflict_shas:
                     plan = plan_removal(kb_root, old_sha)
                     apply_removal(plan, kb_root, hard_delete=False)
+                    # 同步从反向索引移除旧 sha
+                    filename_index_remove(old_sha, filename_index)
                 # Reload source_map after trash-moving old records
                 source_map = load_source_map(meta)
                 report["updated"].append({
@@ -137,6 +148,8 @@ def ingest_inbox(kb_root: Path, auto_update: bool = True) -> dict:
                 kb_root / "raw" / "index.jsonl",
                 {"sha256": sha, "event": "ingested", "filename": f.name},
             )
+            # FIX-A: 新 sha 加入反向索引
+            filename_index_add(f.stem, sha, filename_index)
             f.unlink()
 
             if not is_update:
@@ -145,6 +158,7 @@ def ingest_inbox(kb_root: Path, auto_update: bool = True) -> dict:
             report["failed"].append({"name": f.name, "error": str(e)})
 
     save_source_map(source_map, meta)
+    save_filename_index(filename_index, meta)
     return report
 
 

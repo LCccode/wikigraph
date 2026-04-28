@@ -167,6 +167,73 @@ def append_event(index_path: Path, event: dict) -> None:
         f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
 
+# --- filename_index.json (FIX-A: source_map 反向索引) ---
+
+def load_filename_index(meta_dir: Path) -> dict[str, list[str]]:
+    """加载 filename_index.json。文件不存在返回空 dict（冷启动场景）。"""
+    return _read_json(meta_dir / "filename_index.json")
+
+
+def save_filename_index(index: dict[str, list[str]], meta_dir: Path) -> None:
+    """原子写入 filename_index.json。"""
+    _write_json(index, meta_dir / "filename_index.json")
+
+
+def rebuild_filename_index(source_map: dict) -> dict[str, list[str]]:
+    """冷启动重建：一次性扫 source_map 生成反向索引。
+
+    旧 KB 首次使用时调用一次，此后增量维护。
+    复杂度 O(N)。
+    """
+    index: dict[str, list[str]] = {}
+    for sha256, info in source_map.items():
+        stem = Path(info.get("original_filename", "") or "").stem
+        if stem:
+            index.setdefault(stem, []).append(sha256)
+    return index
+
+
+def filename_index_lookup(
+    stem: str,
+    index: dict[str, list[str]],
+    exclude_sha: str | None = None,
+) -> list[str]:
+    """查询 stem 对应的 sha256 列表，排除 exclude_sha（当前文件自身）。"""
+    candidates = index.get(stem, [])
+    if exclude_sha:
+        candidates = [s for s in candidates if s != exclude_sha]
+    return candidates
+
+
+def filename_index_add(
+    stem: str,
+    sha256: str,
+    index: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    """向反向索引添加一条记录（ingest 新文件时调用）。幂等。"""
+    existing = index.setdefault(stem, [])
+    if sha256 not in existing:
+        existing.append(sha256)
+    return index
+
+
+def filename_index_remove(
+    sha256: str,
+    index: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    """从反向索引中删除一个 sha256（update/trash 旧版本时调用）。
+
+    清空后的 stem key 保留空列表（不删 key，避免并发写问题）。
+    """
+    for stem_list in index.values():
+        if sha256 in stem_list:
+            stem_list.remove(sha256)
+    return index
+
+
+# --- ConceptsIndexWriter (FIX-B: per-task 增量写) ---
+
+
 # --- cost.jsonl ---
 
 def append_cost(logs_dir: Path, op: str, model: str, input_tokens: int, output_tokens: int, took_ms: int = 0) -> None:

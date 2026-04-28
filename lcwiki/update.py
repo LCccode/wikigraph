@@ -182,6 +182,22 @@ def apply_removal(
         except (json.JSONDecodeError, OSError):
             pass
 
+    # FIX-A: 同步 filename_index 反向索引（仅在文件存在时维护，旧 KB 冷启动安全）
+    from lcwiki.index import (
+        load_filename_index,
+        save_filename_index,
+        filename_index_remove,
+    )
+    meta_dir = kb_root / "vault" / "meta"
+    fi_path = meta_dir / "filename_index.json"
+    if fi_path.exists():
+        try:
+            fi = load_filename_index(meta_dir)
+            filename_index_remove(plan["sha256"], fi)
+            save_filename_index(fi, meta_dir)
+        except (OSError, json.JSONDecodeError):
+            pass
+
     return report
 
 
