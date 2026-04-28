@@ -235,6 +235,7 @@ def main():
         print()
         print("  lcwiki compile-prepare --kb KB                       Stage pending compile tasks")
         print("  lcwiki compile-write --kb KB --task-id T ...         Finalize one compiled article")
+        print("  lcwiki compile-reduce --kb KB                        Merge concepts partials → concepts_index.json")
         print("  lcwiki compile-verify --kb KB                        Verify articles + concepts schema")
         print()
         print("  lcwiki graph-run --kb KB --extraction FILE.json      Build graph from extraction JSON")
@@ -292,6 +293,10 @@ def main():
     elif cmd == "compile-write":
         from lcwiki import compile_cmd
         sys.exit(compile_cmd.main_write(args[1:]))
+
+    elif cmd == "compile-reduce":
+        from lcwiki import compile_cmd
+        sys.exit(compile_cmd.main_reduce(args[1:]))
 
     elif cmd == "compile-verify":
         from lcwiki import compile_verify

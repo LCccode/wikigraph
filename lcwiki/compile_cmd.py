@@ -97,9 +97,7 @@ def cmd_write(
         update_concept_markdown,
     )
     from lcwiki.index import (
-        update_concepts_index,
-        save_concepts_index,
-        load_concepts_index,
+        ConceptsIndexWriter,
         append_event,
         load_source_map,
         save_source_map,
@@ -127,7 +125,7 @@ def cmd_write(
     article_out.parent.mkdir(parents=True, exist_ok=True)
     article_out.write_text(article_content, encoding="utf-8")
 
-    idx = load_concepts_index(kb / "vault" / "meta")
+    writer = ConceptsIndexWriter(kb / "vault" / "meta", task_id)
     for c in concepts:
         cname = c["name"]
         safe_c = "".join(ch for ch in cname if ch not in r'\/*?:"<>|')
@@ -148,14 +146,13 @@ def cmd_write(
         else:
             text = cpath.read_text(encoding="utf-8")
             cpath.write_text(update_concept_markdown(text, article_title), encoding="utf-8")
-        idx = update_concepts_index(
+        writer.update(
             cname,
             f"concepts/{safe_c}.md",
             summary=c.get("summary", ""),
             aliases=c.get("aliases", []),
-            index=idx,
         )
-    save_concepts_index(idx, kb / "vault" / "meta")
+    writer.flush()
 
     snapshot_path = Path("/tmp/.lcwiki_concepts_snapshot.json")
     snapshot = json.loads(snapshot_path.read_text()) if snapshot_path.exists() else {}
@@ -318,3 +315,34 @@ def main_write(argv: list[str]) -> int:
     except Exception as e:
         print(f"error: compile-write failed: {e}", file=sys.stderr)
         return 1
+
+
+def cmd_reduce(kb: Path) -> int:
+    """compile-reduce：合并所有 partial 到 concepts_index.json。
+
+    应在所有 compile-write 调用完成后执行一次。
+    """
+    from lcwiki.index import ConceptsIndexWriter
+    result = ConceptsIndexWriter.reduce(kb / "vault" / "meta")
+    print(f"[compile-reduce] 合并完成，concepts_index 共 {len(result)} 个概念")
+    return 0
+
+
+def main_reduce(argv: list[str]) -> int:
+    kb: Path | None = None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--kb":
+            kb = Path(argv[i + 1])
+            i += 2
+        else:
+            print(f"error: unknown flag '{a}'", file=sys.stderr)
+            return 2
+    if kb is None:
+        print("usage: lcwiki compile-reduce --kb KB_PATH", file=sys.stderr)
+        return 2
+    if not kb.exists():
+        print(f"error: kb path does not exist: {kb}", file=sys.stderr)
+        return 1
+    return cmd_reduce(kb)

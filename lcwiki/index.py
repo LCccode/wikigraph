@@ -167,6 +167,8 @@ def append_event(index_path: Path, event: dict) -> None:
         f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
 
+# --- cost.jsonl ---
+
 # --- filename_index.json (FIX-A: source_map 反向索引) ---
 
 def load_filename_index(meta_dir: Path) -> dict[str, list[str]]:
@@ -234,7 +236,108 @@ def filename_index_remove(
 # --- ConceptsIndexWriter (FIX-B: per-task 增量写) ---
 
 
-# --- cost.jsonl ---
+class ConceptsIndexWriter:
+    """Per-task 增量写：compile-write 阶段每个 task 写自己的 partial 文件。
+
+    使用方式：
+        writer = ConceptsIndexWriter(meta_dir, task_id)
+        writer.update(concept_name, concept_path, summary, aliases)
+        writer.flush()   # compile-write 结束时调用一次
+
+    reduce 阶段（compile-reduce 命令）：
+        ConceptsIndexWriter.reduce(meta_dir)
+    """
+
+    PARTIAL_DIR = "concepts_partials"  # meta_dir 下的子目录
+
+    def __init__(self, meta_dir: Path, task_id: str) -> None:
+        self._meta_dir = meta_dir
+        self._task_id = task_id
+        self._partial_path = meta_dir / self.PARTIAL_DIR / f"{task_id}.partial.json"
+        self._partial_path.parent.mkdir(parents=True, exist_ok=True)
+        # 加载已有 partial（支持断点续写，即同一 task 多次调用）
+        self._data: dict = {}
+        if self._partial_path.exists():
+            try:
+                self._data = json.loads(self._partial_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                self._data = {}
+
+    def update(
+        self,
+        concept_name: str,
+        concept_path: str,
+        summary: str = "",
+        aliases: list[str] | None = None,
+    ) -> None:
+        """内存中更新一个概念（不写磁盘）。"""
+        existing = self._data.get(concept_name, {})
+        merged_aliases = list(set(existing.get("aliases", []) + (aliases or [])))
+        self._data[concept_name] = {
+            "path": concept_path,
+            "aliases": merged_aliases,
+            "summary": summary or existing.get("summary", ""),
+            "article_count": existing.get("article_count", 0) + 1,
+        }
+
+    def flush(self) -> None:
+        """将内存数据写入 partial 文件（compile-write 结束时调用）。"""
+        self._partial_path.write_text(
+            json.dumps(self._data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    @classmethod
+    def reduce(cls, meta_dir: Path) -> dict:
+        """合并所有 partial 文件到 concepts_index.json。
+
+        幂等：重复调用安全。执行步骤：
+        1. 读取现有 concepts_index.json（可能为空）
+        2. 遍历 concepts_partials/*.partial.json，逐条合并
+        3. 写回 concepts_index.json
+        4. 删除已合并的 partial 文件
+
+        返回合并后的完整 index。
+        """
+        partial_dir = meta_dir / cls.PARTIAL_DIR
+        base = _read_json(meta_dir / "concepts_index.json")
+
+        if not partial_dir.exists():
+            return base
+
+        for pfile in sorted(partial_dir.glob("*.partial.json")):
+            try:
+                partial = json.loads(pfile.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue  # 跳过损坏文件，不阻断
+            for concept_name, info in partial.items():
+                existing = base.get(concept_name, {})
+                merged_aliases = list(set(
+                    existing.get("aliases", []) + info.get("aliases", [])
+                ))
+                base[concept_name] = {
+                    "path": info.get("path", existing.get("path", "")),
+                    "aliases": merged_aliases,
+                    "summary": info.get("summary") or existing.get("summary", ""),
+                    "article_count": existing.get("article_count", 0)
+                                     + info.get("article_count", 0),
+                }
+
+        _write_json(base, meta_dir / "concepts_index.json")
+        # 清理已合并的 partial 文件
+        for pfile in partial_dir.glob("*.partial.json"):
+            pfile.unlink(missing_ok=True)
+
+        return base
+
+    @classmethod
+    def has_dirty_partials(cls, meta_dir: Path) -> bool:
+        """检测是否有未合并的 partial（用于诊断崩溃后状态）。"""
+        partial_dir = meta_dir / cls.PARTIAL_DIR
+        if not partial_dir.exists():
+            return False
+        return any(partial_dir.glob("*.partial.json"))
+
 
 def append_cost(logs_dir: Path, op: str, model: str, input_tokens: int, output_tokens: int, took_ms: int = 0) -> None:
     """Append a cost record to logs/cost.jsonl."""
