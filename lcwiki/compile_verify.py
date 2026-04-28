@@ -24,6 +24,7 @@ Exits non-zero with a structured FAILED: report on any violation.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -49,7 +50,7 @@ def _fail(msg: str) -> None:
     print(f"FAILED: {msg}", file=sys.stderr)
 
 
-def _check_article(path: Path) -> list[str]:
+def _check_article(path: Path, warnings: list[str] | None = None) -> list[str]:
     errs: list[str] = []
     content = path.read_text(encoding="utf-8", errors="replace")
     try:
@@ -95,6 +96,22 @@ def _check_article(path: Path) -> list[str]:
                         f"{path.name}: 核心摘要 and 详细内容 appear identical "
                         "(LLM likely copied content.md twice instead of summarizing)"
                     )
+
+    # FIX-C: aliases 字段检查（默认 warn，LCWIKI_STRICT_ALIASES=1 时升级为 error）
+    strict = os.environ.get("LCWIKI_STRICT_ALIASES") == "1"
+    aliases = fm.get("aliases")
+    if "aliases" not in fm:
+        msg = f"{path.name}: aliases 字段缺失（required since v0.6）"
+        if strict:
+            errs.append(msg)
+        elif warnings is not None:
+            warnings.append(msg)
+    elif not isinstance(aliases, list):
+        # 非 list 一律 error（LLM 输出格式错误，不是兼容性问题）
+        errs.append(
+            f"{path.name}: aliases 必须是 list，当前类型 {type(aliases).__name__}"
+        )
+
     return errs
 
 
@@ -132,7 +149,7 @@ def _check_concept(path: Path) -> list[str]:
     return errs
 
 
-def verify(kb: Path) -> list[str]:
+def verify(kb: Path, warnings: list[str] | None = None) -> list[str]:
     errors: list[str] = []
 
     articles_dir = kb / "vault" / "wiki" / "articles"
@@ -146,7 +163,7 @@ def verify(kb: Path) -> list[str]:
             errors.append("vault/wiki/articles/ has no *.md files")
         else:
             for p in articles:
-                errors.extend(_check_article(p))
+                errors.extend(_check_article(p, warnings=warnings))
 
     if not concepts_dir.exists():
         errors.append(f"concepts dir missing: {concepts_dir}")
@@ -214,7 +231,12 @@ def main(argv: list[str]) -> int:
         print(f"error: kb path does not exist: {kb}", file=sys.stderr)
         return 1
 
-    errors = verify(kb)
+    warnings: list[str] = []
+    errors = verify(kb, warnings=warnings)
+    if warnings:
+        print(f"⚠️ compile verification — {len(warnings)} warning(s):")
+        for w in warnings:
+            print(f"  WARN: {w}")
     if errors:
         print(f"❌ compile verification FAILED — {len(errors)} problem(s):")
         for e in errors:

@@ -193,10 +193,13 @@ customer: "{customer}"
 customer_type: "{customer_type}"
 source_sha256: "{source_sha256}"
 concepts: {concepts}
+aliases: {aliases}
 created_at: "{created_at}"
 compiled_by: "{compiled_by}"
 confidence: {confidence}
 ---"""
+# 注意 aliases：本文档的别名/同义词列表（list[str]）。如无别名填空列表 []，
+# 不得省略此字段（FIX-C / v0.6 起）。示例：["AI教学助手", "智能备课系统"]
 
 DOC_TYPE_SECTIONS = {
     "solution": ["项目背景", "核心需求", "解决方案", "关键模块", "KPI 与指标", "报价结构", "时间线", "关联概念", "来源"],
@@ -216,6 +219,7 @@ def generate_frontmatter(
     customer_type: str = "",
     source_sha256: str = "",
     concepts: list[str] | None = None,
+    aliases: list[str] | None = None,
     compiled_by: str = "claude-opus-4-6",
     confidence: float = 0.9,
 ) -> str:
@@ -230,6 +234,7 @@ def generate_frontmatter(
         customer_type=customer_type,
         source_sha256=source_sha256,
         concepts=json.dumps(concepts or [], ensure_ascii=False),
+        aliases=json.dumps(aliases or [], ensure_ascii=False),
         created_at=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         compiled_by=compiled_by,
         confidence=confidence,
