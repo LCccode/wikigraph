@@ -8,8 +8,75 @@ handles the graph navigation that precedes it.
 import json
 import unicodedata
 from pathlib import Path
+from typing import ClassVar
 
 import networkx as nx
+
+
+class TldrCache:
+    """进程级 tldr 字段缓存，按 mtime 失效。
+
+    单例模式：通过 TldrCache.instance() 获取，不直接构造。
+    """
+
+    _instance: ClassVar["TldrCache | None"] = None
+
+    def __init__(self) -> None:
+        # {rel_path: (mtime_ns, tldr_string)}
+        self._cache: dict[str, tuple[int, str]] = {}
+
+    @classmethod
+    def instance(cls) -> "TldrCache":
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def reset(cls) -> None:
+        """测试用：重置单例。"""
+        cls._instance = None
+
+    def get(self, article_path: Path) -> str:
+        """获取 tldr，缓存命中且 mtime 未变时直接返回。
+
+        mtime 改变（compile 后）则重新读文件并更新缓存。
+        文件不存在时返回 '(无 tldr 字段)'。
+        """
+        import re as _re
+        key = str(article_path)
+        try:
+            current_mtime = article_path.stat().st_mtime_ns
+        except OSError:
+            return "(无 tldr 字段)"
+
+        cached = self._cache.get(key)
+        if cached and cached[0] == current_mtime:
+            return cached[1]
+
+        # 缓存未命中或 mtime 变化，重新读文件
+        try:
+            text = article_path.read_text(encoding="utf-8")
+        except OSError:
+            return "(无 tldr 字段)"
+
+        m = _re.search(r'^tldr:\s*"?(.+?)"?\s*$', text, flags=_re.MULTILINE)
+        tldr = m.group(1).strip() if m else "(无 tldr 字段)"
+        self._cache[key] = (current_mtime, tldr)
+        return tldr
+
+    def warm_up(self, wiki_dir: Path) -> int:
+        """预热：扫描 wiki_dir/articles/ 全量加载 tldr。
+
+        返回加载条目数。query 进程启动时可选调用（非必须，lazy 模式也安全）。
+        """
+        articles_dir = wiki_dir / "articles"
+        if not articles_dir.exists():
+            return 0
+        count = 0
+        for p in articles_dir.glob("*.md"):
+            self.get(p)
+            count += 1
+        return count
 
 
 def _strip_diacritics(text: str) -> str:
@@ -236,16 +303,8 @@ def read_article_tldrs(
     wiki_dir: Path,
     max_tldrs: int = 10,
 ) -> list[dict]:
-    """Token-saving helper: read only the `tldr` field from article frontmatter
-    for each visited article node. Use this BEFORE reading full article content.
-
-    Returns [{"label": ..., "path": ..., "tldr": ...}], ranked by node degree.
-
-    Rationale: reading 10 TL;DRs (~100 字 each ≈ 1K tokens) is much cheaper
-    than reading 10 articles (~12K chars each ≈ 40K tokens). The LLM can then
-    decide which 2-3 full articles are actually needed for the answer.
-    """
-    import re
+    """Token-saving helper — 使用 TldrCache 避免重复磁盘 IO。（签名不变）"""
+    cache = TldrCache.instance()
     candidates = []
     for nid in visited_nodes:
         src = G.nodes.get(nid, {}).get("source_file", "")
@@ -254,12 +313,7 @@ def read_article_tldrs(
         p = wiki_dir / src
         if not p.exists():
             continue
-        try:
-            text = p.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        m = re.search(r'^tldr:\s*"?(.+?)"?\s*$', text, flags=re.MULTILINE)
-        tldr = m.group(1).strip() if m else "(无 tldr 字段)"
+        tldr = cache.get(p)
         label = G.nodes[nid].get("label", p.stem)
         candidates.append({
             "label": label,
